@@ -113,9 +113,8 @@
     </form>
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
     <script>
-// 1. BANCO DE DADOS (Simulado)
-// Como o Guanabara ensina: Isso é um Vetor (Array) contendo Objetos.
-const listaDePecas = [
+// --- 1. DADOS ---
+const pecas = [
     { nome: "Blusa Fundamental", codigo: "BF01" },
     { nome: "Blusa Ed Inf", codigo: "BI01" },
     { nome: "Calça Terbrim", codigo: "CTB" },
@@ -124,69 +123,116 @@ const listaDePecas = [
     { nome: "Short Helanca", codigo: "SH" }
 ];
 
-// 2. CONFIGURAÇÃO DO FUSE
-// Estamos criando uma instância (objeto) novo da ferramenta
-const opcoesFuse = {
-    keys: ['nome', 'codigo'], // Onde ele deve procurar? No nome e no código
-    threshold: 0.4, // Tolerância a erros (0 = exato, 1 = aceita tudo)
+// --- 2. CONFIGURAÇÃO DO FUSE ---
+const opcoes = {
+    keys: ['nome', 'codigo'],
+    threshold: 0.4,
 };
+const fuse = new Fuse(pecas, opcoes);
 
-const fuse = new Fuse(listaDePecas, opcoesFuse);
+// --- 3. ELEMENTOS DO DOM ---
+const input = document.getElementById('buscaPeca');
+const lista = document.getElementById('listaResultados');
 
-// Fim do Fuse
+// VARIÁVEL DE CONTROLE (NOVO!)
+// Ela diz qual item da lista está selecionado (-1 significa nenhum)
+let focoAtual = -1;
 
-// Selecionando os elementos do HTML (DOM)
-const inputPeca = document.getElementById('buscaPeca');
-const ulResultados = document.getElementById('listaResultados');
-
-// EVENTO: Toda vez que o usuário soltar uma tecla (input)
-inputPeca.addEventListener('input', function() {
+// --- 4. FUNÇÃO QUE FAZ A BUSCA (INPUT) ---
+input.addEventListener('input', function() {
+    const valor = input.value;
     
-    // Pega o que foi digitado
-    const oQueFoiDigitado = inputPeca.value;
+    // Reseta o foco toda vez que digita algo novo
+    focoAtual = -1;
 
-    // Se não tiver nada escrito, esconde a lista e para a função
-    if (oQueFoiDigitado.length === 0) {
-        ulResultados.style.display = 'none';
+    if (!valor) {
+        lista.style.display = 'none';
         return;
     }
 
-    // MÁGICA: O Fuse pesquisa na lista
-    const resultados = fuse.search(oQueFoiDigitado);
+    const resultados = fuse.search(valor);
+    lista.innerHTML = '';
 
-    // Limpa a lista antiga (para não acumular resultados)
-    ulResultados.innerHTML = '';
-
-    // Se achou algo...
     if (resultados.length > 0) {
-        ulResultados.style.display = 'block'; // Mostra a caixa
-
-        // Para cada item encontrado... (Loop)
+        lista.style.display = 'block';
+        
         resultados.forEach(function(resultado) {
-            // Cria um elemento <li> na memória
             const li = document.createElement('li');
-            
-            // Define o texto dele (acessamos .item porque o Fuse devolve assim)
             li.textContent = resultado.item.nome;
-
-            // EVENTO DE CLIQUE: Quando clicar na sugestão
+            
+            // Evento de Mouse (Clique)
             li.addEventListener('click', function() {
-                inputPeca.value = resultado.item.nome; // Preenche o campo
-                ulResultados.style.display = 'none';   // Esconde a lista
+                input.value = resultado.item.nome;
+                lista.style.display = 'none';
             });
 
-            // Adiciona o <li> dentro da <ul> na tela
-            ulResultados.appendChild(li);
+            lista.appendChild(li);
         });
     } else {
-        ulResultados.style.display = 'none'; // Se não achou nada, esconde
+        lista.style.display = 'none';
     }
 });
 
-// Extra: Clicar fora da lista para fechar
-document.addEventListener('click', function(evento) {
-    if (evento.target !== inputPeca) {
-        ulResultados.style.display = 'none';
+// --- 5. NAVEGAÇÃO POR TECLADO (NOVO!) ---
+input.addEventListener('keydown', function(e) {
+    // Pegamos todos os itens (li) que estão visíveis na lista
+    let itens = lista.getElementsByTagName('li');
+
+    if (e.key === "ArrowDown") { // Seta para BAIXO
+        focoAtual++; // Aumenta o índice (desce na lista)
+        addAtivo(itens); // Pinta o item de azul
+    } 
+    else if (e.key === "ArrowUp") { // Seta para CIMA
+        focoAtual--; // Diminui o índice (sobe na lista)
+        addAtivo(itens); // Pinta o item de azul
+    } 
+    else if (e.key === "Enter") { // Tecla ENTER
+        e.preventDefault(); // Impede de enviar o formulário (se houver botão submit)
+        
+        if (focoAtual > -1) {
+            // Se tiver algum item selecionado, simulamos um "clique" nele
+            if (itens) itens[focoAtual].click();
+        }
+    }
+    else if (e.key === "Tab") { // Tecla TAB
+         if (focoAtual > -1) {
+            // Se estiver selecionado, completa o texto e vai pro próximo campo
+            if (itens) itens[focoAtual].click();
+        } else {
+            // Se não tiver nada selecionado, apenas fecha a lista e deixa o Tab seguir
+            lista.style.display = 'none';
+        }
+    }
+});
+
+// --- 6. FUNÇÕES AUXILIARES (A Mágica da Cor) ---
+
+function addAtivo(itens) {
+    // 1. Limpa a cor de todos primeiro (pra não ficar dois azuis)
+    removeAtivo(itens);
+
+    // 2. Verifica se não saiu do limite da lista
+    if (focoAtual >= itens.length) focoAtual = 0; // Se passou do último, volta pro primeiro
+    if (focoAtual < 0) focoAtual = itens.length - 1; // Se subiu além do primeiro, vai pro último
+
+    // 3. Adiciona a classe CSS que deixa azul
+    itens[focoAtual].classList.add("item-selecionado");
+    
+    // (Opcional) Faz a lista rolar sozinha para acompanhar o item azul
+    itens[focoAtual].scrollIntoView({ block: 'nearest' }); 
+}
+
+function removeAtivo(itens) {
+    // Passa por todos os itens e tira a classe azul
+    for (let i = 0; i < itens.length; i++) {
+        itens[i].classList.remove("item-selecionado");
+    }
+}
+
+// Fechar ao clicar fora
+document.addEventListener('click', function(e) {
+    if (e.target !== input) {
+        lista.style.display = 'none';
     }
 });
     </script>
