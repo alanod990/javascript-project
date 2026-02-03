@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <title>Gry Confecções</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="css/reset.css" rel="stylesheet">
+    </head>
+    
+    <body>
+    
+    <style>
+    header h1 {
+        font-family: Georgia, 'Times New Roman', Times, serif;
+        font-size: 30px;
+        border: 1px solid;
+        background-color: grey;
+        text-align: center;
+    }
+    
+    nav ul {
+        font-family: Georgia, 'Times New Roman', Times, serif;
+        display: flex;
+        padding: 5px;
+        border: 1px solid;
+        background-color: lightgrey;
+        justify-content: center
+    }
+    
+    nav ul li:not(:last-child)::after {
+        content: "•";
+        margin: 6px;
+    }
+    
+    /* código fuzzy search */
+    
+    /* Isso garante que a lista fique presa ao campo de busca */
+.busca-container {
+    position: relative; 
+    width: 300px; /* Largura do campo */
+    margin-top: 10px;
+}
+
+#buscaPeca {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box; /* Garante que o padding não aumente a largura total */
+}
+
+/* A lista de sugestões */
+.lista-suspensa {
+    list-style: none; /* Tira as bolinhas da lista */
+    padding: 0;
+    margin: 0;
+    position: absolute; /* O PULO DO GATO: Faz a lista flutuar por cima de tudo */
+    width: 100%;
+    background: white;
+    border: 1px solid #ccc;
+    display: none; /* Começa escondida */
+    max-height: 200px; /* Se tiver muitos itens, cria barra de rolagem */
+    overflow-y: auto;
+    z-index: 10; /* Garante que fique na frente de outros elementos */
+}
+
+.lista-suspensa li {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer; /* Mãozinha do mouse */
+}
+
+.lista-suspensa li:hover {
+    background-color: #f0f0f0; /* Efeito cinza quando passa o mouse */
+}
+
+/* Quando o item estiver selecionado pelo teclado */
+.item-selecionado {
+    background-color: #1e90ff !important; /* Azul DodgerBlue */
+    color: white; /* Texto branco */
+}
+    
+    </style>
+    <header>
+        <div class="titulo">
+            <h1>Gry Confecções</h1>
+        </div>
+    </header>
+    <nav>
+        <ul>
+            <li>Encomendas</li>
+            <li>Produção</li>
+            <li>Dashboard</li>
+        </ul>
+    </nav>
+    <form>
+        <label for="escola">Escola:</label>
+        <select id="escola" required>
+            <option value="">Selecione...</option>
+            <option value="Frei">Frei</option>
+            <option value="M. Couto">M. Couto</option>
+            <option value="Recanto S.">Recanto S.</option>
+            <option value="S. Bernardo">S. Bernardo</option>
+            <option value="F. Saber">F. Saber</option>
+            <option value="Sonho Meu">Sonho Meu</option>
+        </select>
+        
+        <div class="busca-container">
+            <label for="buscaPeca">Peça do Uniforme:</label>
+            <input type="text" id="buscaPeca" placeholder="Digite o nome da peça..." autocomplete="off">
+            <ul id="listaResultados" class="lista-suspensa"></ul>
+        </div>
+
+        
+    </form>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+    <script>
+// 1. BANCO DE DADOS (Simulado)
+// Como o Guanabara ensina: Isso é um Vetor (Array) contendo Objetos.
+const listaDePecas = [
+    { nome: "Blusa Fundamental", codigo: "BF01" },
+    { nome: "Blusa Ed Inf", codigo: "BI01" },
+    { nome: "Calça Terbrim", codigo: "CTB" },
+    { nome: "Calça Helanca", codigo: "CB" },
+    { nome: "Shorts Saia Helanca", codigo: "SSH" },
+    { nome: "Short Helanca", codigo: "SH" }
+];
+
+// 2. CONFIGURAÇÃO DO FUSE
+// Estamos criando uma instância (objeto) novo da ferramenta
+const opcoesFuse = {
+    keys: ['nome', 'codigo'], // Onde ele deve procurar? No nome e no código
+    threshold: 0.4, // Tolerância a erros (0 = exato, 1 = aceita tudo)
+};
+
+const fuse = new Fuse(listaDePecas, opcoesFuse);
+
+// Fim do Fuse
+
+// Selecionando os elementos do HTML (DOM)
+const inputPeca = document.getElementById('buscaPeca');
+const ulResultados = document.getElementById('listaResultados');
+
+// EVENTO: Toda vez que o usuário soltar uma tecla (input)
+inputPeca.addEventListener('input', function() {
+    
+    // Pega o que foi digitado
+    const oQueFoiDigitado = inputPeca.value;
+
+    // Se não tiver nada escrito, esconde a lista e para a função
+    if (oQueFoiDigitado.length === 0) {
+        ulResultados.style.display = 'none';
+        return;
+    }
+
+    // MÁGICA: O Fuse pesquisa na lista
+    const resultados = fuse.search(oQueFoiDigitado);
+
+    // Limpa a lista antiga (para não acumular resultados)
+    ulResultados.innerHTML = '';
+
+    // Se achou algo...
+    if (resultados.length > 0) {
+        ulResultados.style.display = 'block'; // Mostra a caixa
+
+        // Para cada item encontrado... (Loop)
+        resultados.forEach(function(resultado) {
+            // Cria um elemento <li> na memória
+            const li = document.createElement('li');
+            
+            // Define o texto dele (acessamos .item porque o Fuse devolve assim)
+            li.textContent = resultado.item.nome;
+
+            // EVENTO DE CLIQUE: Quando clicar na sugestão
+            li.addEventListener('click', function() {
+                inputPeca.value = resultado.item.nome; // Preenche o campo
+                ulResultados.style.display = 'none';   // Esconde a lista
+            });
+
+            // Adiciona o <li> dentro da <ul> na tela
+            ulResultados.appendChild(li);
+        });
+    } else {
+        ulResultados.style.display = 'none'; // Se não achou nada, esconde
+    }
+});
+
+// Extra: Clicar fora da lista para fechar
+document.addEventListener('click', function(evento) {
+    if (evento.target !== inputPeca) {
+        ulResultados.style.display = 'none';
+    }
+});
+    </script>
+    </body>
+</html>
