@@ -173,33 +173,38 @@ input.addEventListener('input', function() {
     }
 });
 
-// --- 5. NAVEGAÇÃO POR TECLADO (NOVO!) ---
+// --- 5. NAVEGAÇÃO POR TECLADO (CORRIGIDO) ---
 input.addEventListener('keydown', function(e) {
-    // Pegamos todos os itens (li) que estão visíveis na lista
     let itens = lista.getElementsByTagName('li');
 
-    if (e.key === "ArrowDown") { // Seta para BAIXO
-        focoAtual++; // Aumenta o índice (desce na lista)
-        addAtivo(itens); // Pinta o item de azul
+    // Se a lista estiver escondida, não fazemos nada especial (deixa o navegador agir)
+    if (lista.style.display === 'none') return;
+
+    if (e.key === "ArrowDown") { 
+        e.preventDefault(); // <--- O SEGREDO! Trava o cursor no lugar
+        focoAtual++; 
+        addAtivo(itens);
     } 
-    else if (e.key === "ArrowUp") { // Seta para CIMA
-        focoAtual--; // Diminui o índice (sobe na lista)
-        addAtivo(itens); // Pinta o item de azul
+    else if (e.key === "ArrowUp") { 
+        e.preventDefault(); // <--- O SEGREDO! Trava o cursor no lugar
+        focoAtual--; 
+        addAtivo(itens);
     } 
-    else if (e.key === "Enter") { // Tecla ENTER
-        e.preventDefault(); // Impede de enviar o formulário (se houver botão submit)
-        
+    else if (e.key === "Enter") { 
+        e.preventDefault(); // Evita enviar o formulário
         if (focoAtual > -1) {
-            // Se tiver algum item selecionado, simulamos um "clique" nele
             if (itens) itens[focoAtual].click();
         }
     }
-    else if (e.key === "Tab") { // Tecla TAB
+    else if (e.key === "Tab") { 
+        // Nota: No TAB geralmente não usamos preventDefault 
+        // porque queremos que ele vá pro próximo campo se não tiver nada selecionado
          if (focoAtual > -1) {
-            // Se estiver selecionado, completa o texto e vai pro próximo campo
-            if (itens) itens[focoAtual].click();
+             e.preventDefault(); // Aqui travamos o Tab só para preencher o campo primeiro
+             if (itens) itens[focoAtual].click();
+             // Opcional: Se quiser que ele preencha E mude de campo, teria que focar o próximo elemento manualmente.
+             // Por enquanto, apenas preencher é mais seguro.
         } else {
-            // Se não tiver nada selecionado, apenas fecha a lista e deixa o Tab seguir
             lista.style.display = 'none';
         }
     }
